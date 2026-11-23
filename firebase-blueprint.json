@@ -1,0 +1,175 @@
+{
+  "entities": {
+    "SiteConfig": {
+      "title": "SiteConfig",
+      "description": "Global HONEY TOP UP site configuration controlled by admin",
+      "type": "object",
+      "properties": {
+        "siteName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "logoUrl": { "type": "string", "maxLength": 150000 },
+        "themeMode": { "type": "string", "enum": ["light", "dark"] },
+        "noticeText": { "type": "string", "maxLength": 500 },
+        "telegramSupportUrl": { "type": "string", "maxLength": 300 },
+        "telegramGroupUrl": { "type": "string", "maxLength": 300 },
+        "supportHours": { "type": "string", "maxLength": 120 },
+        "bkashNumber": { "type": "string", "maxLength": 20 },
+        "nagadNumber": { "type": "string", "maxLength": 20 },
+        "rocketNumber": { "type": "string", "maxLength": 20 },
+        "upayNumber": { "type": "string", "maxLength": 20 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["siteName", "themeMode", "noticeText", "updatedAt"]
+    },
+    "Package": {
+      "title": "Package",
+      "description": "Top-up or entertainment package available for purchase",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-zA-Z0-9_\\-]+$", "maxLength": 128 },
+        "title": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "category": { "type": "string", "minLength": 1, "maxLength": 60 },
+        "price": { "type": "number" },
+        "deliveryLabel": { "type": "string", "maxLength": 40 },
+        "imageUrl": { "type": "string", "maxLength": 200000 },
+        "description": { "type": "string", "maxLength": 500 },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "category", "price", "isActive", "createdAt", "updatedAt"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Registered customer profile and wallet summary (PII isolated)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-zA-Z0-9_\\-]+$", "maxLength": 128 },
+        "ownerUid": { "type": "string", "maxLength": 128 },
+        "shortId": { "type": "string", "maxLength": 20 },
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "phone": { "type": "string", "pattern": "^\\+8801[3-9][0-9]{8}$", "maxLength": 14 },
+        "avatarUrl": { "type": "string", "maxLength": 150000 },
+        "walletBalance": { "type": "number" },
+        "totalSpend": { "type": "number" },
+        "weeklySpend": { "type": "number" },
+        "ordersCount": { "type": "number" },
+        "rank": { "type": "string", "maxLength": 30 },
+        "supportPin": { "type": "string", "maxLength": 10 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "phone", "walletBalance", "createdAt", "updatedAt"]
+    },
+    "Deposit": {
+      "title": "Deposit",
+      "description": "Wallet deposit submission awaiting admin verification",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-zA-Z0-9_\\-]+$", "maxLength": 128 },
+        "userId": { "type": "string", "pattern": "^[a-zA-Z0-9_\\-]+$", "maxLength": 128 },
+        "ownerUid": { "type": "string", "maxLength": 128 },
+        "amount": { "type": "number" },
+        "method": { "type": "string", "enum": ["bkash", "nagad", "rocket", "upay"] },
+        "transactionId": { "type": "string", "minLength": 4, "maxLength": 64 },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "amount", "method", "transactionId", "status", "createdAt", "updatedAt"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Package top-up order placed by a registered user",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-zA-Z0-9_\\-]+$", "maxLength": 128 },
+        "userId": { "type": "string", "pattern": "^[a-zA-Z0-9_\\-]+$", "maxLength": 128 },
+        "ownerUid": { "type": "string", "maxLength": 128 },
+        "packageId": { "type": "string", "pattern": "^[a-zA-Z0-9_\\-]+$", "maxLength": 128 },
+        "packageTitle": { "type": "string", "maxLength": 100 },
+        "amount": { "type": "number" },
+        "playerId": { "type": "string", "minLength": 2, "maxLength": 64 },
+        "status": { "type": "string", "enum": ["pending", "completed", "cancelled"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "packageId", "amount", "playerId", "status", "createdAt", "updatedAt"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "Real-time transaction notification for users and admin",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-zA-Z0-9_\\-]+$", "maxLength": 128 },
+        "ownerUid": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "targetRole": { "type": "string", "enum": ["user", "admin"] },
+        "title": { "type": "string", "maxLength": 100 },
+        "message": { "type": "string", "maxLength": 300 },
+        "isRead": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "targetRole", "title", "message", "isRead", "createdAt"]
+    },
+    "Analytics": {
+      "title": "Analytics",
+      "description": "Real-time visitor, registration, login, and order counters",
+      "type": "object",
+      "properties": {
+        "activeVisitors": { "type": "number" },
+        "totalVisits": { "type": "number" },
+        "totalExits": { "type": "number" },
+        "totalRegistrations": { "type": "number" },
+        "totalLogins": { "type": "number" },
+        "totalOrders": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["activeVisitors", "totalVisits", "totalExits", "totalRegistrations", "totalLogins", "totalOrders", "updatedAt"]
+    },
+    "AdminMarker": {
+      "title": "AdminMarker",
+      "description": "Admin role assignment document",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "maxLength": 120 },
+        "role": { "type": "string", "enum": ["admin"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "role", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/site_config/{configId}": {
+      "schema": { "$ref": "#/entities/SiteConfig" },
+      "description": "Global site settings (theme, notice, logo, payment numbers)"
+    },
+    "/packages/{packageId}": {
+      "schema": { "$ref": "#/entities/Package" },
+      "description": "Catalog of entertainment top-up packages"
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profiles containing PII (restricted to owner or admin)"
+    },
+    "/deposits/{depositId}": {
+      "schema": { "$ref": "#/entities/Deposit" },
+      "description": "Wallet deposit requests"
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/Order" },
+      "description": "User package orders"
+    },
+    "/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/Notification" },
+      "description": "Transaction notifications"
+    },
+    "/analytics/{docId}": {
+      "schema": { "$ref": "#/entities/Analytics" },
+      "description": "Site visitor and activity counters"
+    },
+    "/admins/{uid}": {
+      "schema": { "$ref": "#/entities/AdminMarker" },
+      "description": "Admin role records"
+    }
+  }
+}

@@ -1,0 +1,277 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: Default-deny all unmatched paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Primitive Helpers ---
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'sadmann.muzaahid@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isOwner(data) {
+      return isSignedIn() && data.ownerUid == request.auth.uid;
+    }
+
+    // --- Validation Blueprints ---
+    function isValidSiteConfig(data) {
+      return data.keys().hasAll(['siteName', 'themeMode', 'noticeText', 'updatedAt'])
+        && data.keys().hasOnly([
+          'siteName', 'logoUrl', 'themeMode', 'noticeText',
+          'telegramSupportUrl', 'telegramGroupUrl', 'supportHours',
+          'bkashNumber', 'nagadNumber', 'rocketNumber', 'upayNumber', 'updatedAt'
+        ])
+        && data.siteName is string && data.siteName.size() >= 1 && data.siteName.size() <= 80
+        && data.themeMode in ['light', 'dark']
+        && data.noticeText is string && data.noticeText.size() <= 500
+        && (!('logoUrl' in data) || (data.logoUrl is string && data.logoUrl.size() <= 150000))
+        && (!('telegramSupportUrl' in data) || (data.telegramSupportUrl is string && data.telegramSupportUrl.size() <= 300))
+        && (!('telegramGroupUrl' in data) || (data.telegramGroupUrl is string && data.telegramGroupUrl.size() <= 300))
+        && (!('supportHours' in data) || (data.supportHours is string && data.supportHours.size() <= 120))
+        && (!('bkashNumber' in data) || (data.bkashNumber is string && data.bkashNumber.size() <= 20))
+        && (!('nagadNumber' in data) || (data.nagadNumber is string && data.nagadNumber.size() <= 20))
+        && (!('rocketNumber' in data) || (data.rocketNumber is string && data.rocketNumber.size() <= 20))
+        && (!('upayNumber' in data) || (data.upayNumber is string && data.upayNumber.size() <= 20))
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidPackage(data) {
+      return data.keys().hasAll(['id', 'title', 'category', 'price', 'isActive', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly([
+          'id', 'title', 'category', 'price', 'deliveryLabel',
+          'imageUrl', 'description', 'isActive', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 100
+        && data.category is string && data.category.size() >= 1 && data.category.size() <= 60
+        && data.price is number && data.price >= 0 && data.price <= 1000000
+        && data.isActive is bool
+        && (!('deliveryLabel' in data) || (data.deliveryLabel is string && data.deliveryLabel.size() <= 40))
+        && (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() <= 200000))
+        && (!('description' in data) || (data.description is string && data.description.size() <= 500))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['id', 'ownerUid', 'name', 'phone', 'walletBalance', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly([
+          'id', 'ownerUid', 'shortId', 'name', 'phone', 'avatarUrl',
+          'walletBalance', 'totalSpend', 'weeklySpend', 'ordersCount',
+          'rank', 'supportPin', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 80
+        && data.phone is string && data.phone.size() == 14 && data.phone.matches('^\\+8801[3-9][0-9]{8}$')
+        && data.walletBalance is number && data.walletBalance >= 0
+        && (!('shortId' in data) || (data.shortId is string && data.shortId.size() <= 20))
+        && (!('avatarUrl' in data) || (data.avatarUrl is string && data.avatarUrl.size() <= 150000))
+        && (!('totalSpend' in data) || (data.totalSpend is number && data.totalSpend >= 0))
+        && (!('weeklySpend' in data) || (data.weeklySpend is number && data.weeklySpend >= 0))
+        && (!('ordersCount' in data) || (data.ordersCount is number && data.ordersCount >= 0))
+        && (!('rank' in data) || (data.rank is string && data.rank.size() <= 30))
+        && (!('supportPin' in data) || (data.supportPin is string && data.supportPin.size() <= 10))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidDeposit(data) {
+      return data.keys().hasAll(['id', 'userId', 'ownerUid', 'amount', 'method', 'transactionId', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'userId', 'ownerUid', 'amount', 'method', 'transactionId', 'status', 'createdAt', 'updatedAt'])
+        && isValidId(data.id)
+        && isValidId(data.userId)
+        && data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128
+        && data.amount is number && data.amount >= 10 && data.amount <= 500000
+        && data.method in ['bkash', 'nagad', 'rocket', 'upay']
+        && data.transactionId is string && data.transactionId.size() >= 4 && data.transactionId.size() <= 64
+        && data.status in ['pending', 'approved', 'rejected']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidOrder(data) {
+      return data.keys().hasAll(['id', 'userId', 'ownerUid', 'packageId', 'amount', 'playerId', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'userId', 'ownerUid', 'packageId', 'packageTitle', 'amount', 'playerId', 'status', 'createdAt', 'updatedAt'])
+        && isValidId(data.id)
+        && isValidId(data.userId)
+        && data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128
+        && isValidId(data.packageId)
+        && (!('packageTitle' in data) || (data.packageTitle is string && data.packageTitle.size() <= 100))
+        && data.amount is number && data.amount >= 0 && data.amount <= 1000000
+        && data.playerId is string && data.playerId.size() >= 2 && data.playerId.size() <= 64
+        && data.status in ['pending', 'completed', 'cancelled']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll(['id', 'targetRole', 'title', 'message', 'isRead', 'createdAt'])
+        && data.keys().hasOnly(['id', 'ownerUid', 'userId', 'targetRole', 'title', 'message', 'isRead', 'createdAt'])
+        && isValidId(data.id)
+        && (!('ownerUid' in data) || (data.ownerUid is string && data.ownerUid.size() <= 128))
+        && (!('userId' in data) || (data.userId is string && data.userId.size() <= 128))
+        && data.targetRole in ['user', 'admin']
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 100
+        && data.message is string && data.message.size() >= 1 && data.message.size() <= 300
+        && data.isRead is bool
+        && data.createdAt is timestamp;
+    }
+
+    function isValidAnalytics(data) {
+      return data.keys().hasAll(['activeVisitors', 'totalVisits', 'totalExits', 'totalRegistrations', 'totalLogins', 'totalOrders', 'updatedAt'])
+        && data.keys().hasOnly(['activeVisitors', 'totalVisits', 'totalExits', 'totalRegistrations', 'totalLogins', 'totalOrders', 'updatedAt'])
+        && data.activeVisitors is number && data.activeVisitors >= 0
+        && data.totalVisits is number && data.totalVisits >= 0
+        && data.totalExits is number && data.totalExits >= 0
+        && data.totalRegistrations is number && data.totalRegistrations >= 0
+        && data.totalLogins is number && data.totalLogins >= 0
+        && data.totalOrders is number && data.totalOrders >= 0
+        && data.updatedAt is timestamp;
+    }
+
+    // --- Collection Rules ---
+    match /test/connection {
+      allow get: if resource == null || resource != null;
+    }
+
+    match /site_config/{configId} {
+      allow get: if isValidId(configId) && resource != null;
+      allow list: if resource != null;
+      allow create, update: if isValidId(configId) && isAdmin() && isValidSiteConfig(incoming()) && incoming().updatedAt == request.time;
+      allow delete: if isValidId(configId) && isAdmin();
+    }
+
+    match /packages/{packageId} {
+      allow get: if isValidId(packageId) && resource != null;
+      allow list: if resource != null && resource.data.isActive == true || isAdmin();
+      allow create: if isValidId(packageId) && isAdmin() && isValidPackage(incoming()) && incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isValidId(packageId) && isAdmin() && isValidPackage(incoming()) && incoming().createdAt == existing().createdAt && incoming().updatedAt == request.time;
+      allow delete: if isValidId(packageId) && isAdmin();
+    }
+
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (isOwner(existing()) || isAdmin());
+      allow list: if isSignedIn() && (existing().ownerUid == request.auth.uid || isAdmin());
+      allow create: if isValidId(userId)
+        && isSignedIn()
+        && isValidUserProfile(incoming())
+        && incoming().ownerUid == request.auth.uid
+        && incoming().walletBalance == 0
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(userId)
+        && isSignedIn()
+        && isValidUserProfile(incoming())
+        && incoming().createdAt == existing().createdAt
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            isOwner(existing()) &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['name', 'avatarUrl', 'updatedAt'])
+          )
+        );
+      allow delete: if isValidId(userId) && isAdmin();
+    }
+
+    match /deposits/{depositId} {
+      allow get: if isValidId(depositId) && (isOwner(existing()) || isAdmin());
+      allow list: if isSignedIn() && (existing().ownerUid == request.auth.uid || isAdmin());
+      allow create: if isValidId(depositId)
+        && isSignedIn()
+        && isValidDeposit(incoming())
+        && incoming().ownerUid == request.auth.uid
+        && incoming().status == 'pending'
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(depositId)
+        && isSignedIn()
+        && isValidDeposit(incoming())
+        && incoming().createdAt == existing().createdAt
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().userId == existing().userId
+        && incoming().updatedAt == request.time
+        && isAdmin();
+      allow delete: if isValidId(depositId) && isAdmin();
+    }
+
+    match /orders/{orderId} {
+      allow get: if isValidId(orderId) && (isOwner(existing()) || isAdmin());
+      allow list: if isSignedIn() && (existing().ownerUid == request.auth.uid || isAdmin());
+      allow create: if isValidId(orderId)
+        && isSignedIn()
+        && isValidOrder(incoming())
+        && incoming().ownerUid == request.auth.uid
+        && incoming().status == 'pending'
+        && exists(/databases/$(database)/documents/packages/$(incoming().packageId))
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(orderId)
+        && isSignedIn()
+        && isValidOrder(incoming())
+        && incoming().createdAt == existing().createdAt
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().userId == existing().userId
+        && incoming().packageId == existing().packageId
+        && incoming().updatedAt == request.time
+        && isAdmin();
+      allow delete: if isValidId(orderId) && isAdmin();
+    }
+
+    match /notifications/{notificationId} {
+      allow get: if isValidId(notificationId) && (isOwner(existing()) || isAdmin());
+      allow list: if isSignedIn() && (existing().ownerUid == request.auth.uid || isAdmin());
+      allow create: if isValidId(notificationId)
+        && isSignedIn()
+        && isValidNotification(incoming())
+        && (isAdmin() || incoming().ownerUid == request.auth.uid)
+        && incoming().createdAt == request.time;
+      allow update: if isValidId(notificationId)
+        && isSignedIn()
+        && isValidNotification(incoming())
+        && incoming().createdAt == existing().createdAt
+        && (
+          isAdmin() ||
+          (isOwner(existing()) && incoming().diff(existing()).affectedKeys().hasOnly(['isRead']))
+        );
+      allow delete: if isValidId(notificationId) && isAdmin();
+    }
+
+    match /analytics/{docId} {
+      allow get: if isValidId(docId) && isAdmin();
+      allow list: if isAdmin();
+      allow create, update: if isValidId(docId) && isAdmin() && isValidAnalytics(incoming()) && incoming().updatedAt == request.time;
+      allow delete: if isValidId(docId) && isAdmin();
+    }
+
+    match /admins/{uid} {
+      allow get: if isValidId(uid) && isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow list: if isAdmin();
+      allow create, update, delete: if false;
+    }
+  }
+}

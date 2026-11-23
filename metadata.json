@@ -1,0 +1,6 @@
+{
+  "name": "HONEY TOP UP",
+  "description": "HONEY TOP UP is a fast, mobile-first entertainment and gaming top-up platform with instant wallet deposits, custom packages, and real-time administration.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
